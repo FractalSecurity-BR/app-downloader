@@ -1,0 +1,14 @@
+services:
+  app-downloader:
+    build: .
+    container_name: app-downloader
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/var/www/app-downloader
+    networks:
+      - solinski-network
+
+networks:
+  solinski-network:
+    external: true

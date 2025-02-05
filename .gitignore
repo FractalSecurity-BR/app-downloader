@@ -1,0 +1,5 @@
+# *.apk
+*.ipa
+
+# ./public/*.apk
+./public/*.ipa

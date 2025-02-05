@@ -1,0 +1,103 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+    <title>iMonitor App Downloader</title>
+    <link rel="icon" type="image/x-icon" href="/downloader-apk/favicon.ico" />
+    <style type="text/css">
+      body {
+        color: #000000;
+        background-color: #ffffff;
+        margin: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        flex-direction: column;
+      }
+
+      #container {
+        text-align: center;
+      }
+
+      a img {
+        border: none;
+      }
+
+      .download-link {
+        cursor: pointer;
+        margin-top: 20px;
+        font-size: 18px;
+        text-decoration: none;
+        color: #0000ee;
+      }
+
+      .download-link:hover {
+        text-decoration: underline;
+      }
+
+      .error-message {
+        color: red;
+        font-size: 18px;
+        margin-top: 10px;
+      }
+    </style>
+    <script type="text/javascript">
+      function detectOS() {
+        var userAgent = navigator.userAgent || navigator.vendor || window.opera;
+
+        if (/android/i.test(userAgent)) {
+          return "Android";
+        }
+
+        if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
+          return "iOS";
+        }
+
+        return "unknown";
+      }
+
+      function setDownloadLink() {
+        var os = detectOS();
+        var linkElement = document.getElementById("download-link");
+        var errorMessageElement = document.getElementById("error-message");
+
+        if (os === "Android") {
+          linkElement.href = "/downloader-apk/imonitor.apk";
+          linkElement.download = "imonitor.apk";
+          errorMessageElement.style.display = "none";
+          linkElement.innerHTML =
+            "Clique aqui para baixar o app iMonitor para Android";
+        } else if (os === "iOS") {
+          linkElement.href = "#";
+          linkElement.removeAttribute("download");
+          linkElement.innerHTML = "Download não disponível";
+          errorMessageElement.innerHTML =
+            "O app está disponível apenas para Android.";
+          errorMessageElement.style.display = "block";
+        } else {
+          linkElement.href = "/downloader-apk/imonitor.apk";
+          linkElement.download = "imonitor.apk";
+          errorMessageElement.style.display = "none";
+          linkElement.innerHTML =
+            "Clique aqui para baixar o app iMonitor para Android";
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        setDownloadLink();
+      });
+    </script>
+  </head>
+  <body>
+    <div>
+      <img src="/downloader-apk/icon.png" alt="iMonitor" width="200" height="200" />
+    </div>
+    <div id="container">
+      <a id="download-link" class="download-link">
+        <img src="/downloader-apk/favicon.ico" alt="Baixar APK" width="64" height="64" />
+      </a>
+      <div id="error-message" class="error-message" style="display: none"></div>
+    </div>
+  </body>
+</html>
