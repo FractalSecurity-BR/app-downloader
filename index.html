@@ -1,103 +1,119 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
-  <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>iMonitor App Downloader</title>
-    <link rel="icon" type="image/x-icon" href="favicon.ico" />
-    <style type="text/css">
-      body {
-        color: #000000;
-        background-color: #ffffff;
-        margin: 0;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-        flex-direction: column;
-      }
-
-      #container {
-        text-align: center;
-      }
-
-      a img {
-        border: none;
-      }
-
-      .download-link {
-        cursor: pointer;
-        margin-top: 20px;
-        font-size: 18px;
-        text-decoration: none;
-        color: #0000ee;
-      }
-
-      .download-link:hover {
-        text-decoration: underline;
-      }
-
-      .error-message {
-        color: red;
-        font-size: 18px;
-        margin-top: 10px;
-      }
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <style>
+        body {
+            background-color: #000000;
+            color: #ffffff;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            text-align: center;
+            font-family: Arial, sans-serif;
+        }
+        .header {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+        }
+        .logo-header {
+            max-width: 300px;
+            margin-bottom: 90px;
+        }
+        .button-container {
+            display: flex;
+            gap: 20px;
+        }
+        .download-button {
+            background-color: #05FF00;
+            color: #000000;
+            text-decoration: none;
+            font-size: 18px;
+            font-weight: bold;
+            padding: 15px 30px;
+            border-radius: 5px;
+            width: 250px;
+            text-align: center;
+        }
+        .download-button:hover {
+            background-color: #04E000;
+        }
+        .error-message {
+            color: red;
+            font-size: 18px;
+            margin-top: 10px;
+        }
     </style>
     <script type="text/javascript">
-      function detectOS() {
-        var userAgent = navigator.userAgent || navigator.vendor || window.opera;
+        function detectOS() {
+            var userAgent = navigator.userAgent || navigator.vendor || window.opera;
 
-        if (/android/i.test(userAgent)) {
-          return "Android";
+            if (/android/i.test(userAgent)) {
+                return "Android";
+            }
+
+            if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
+                return "iOS";
+            }
+
+            return "unknown";
         }
 
-        if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
-          return "iOS";
+        function setDownloadLinks() {
+            var os = detectOS();
+            var imonitorLink = document.getElementById("imonitor-download");
+            var cargaSoltaLink = document.getElementById("carga-solta-download");
+            var errorMessageElement = document.getElementById("error-message");
+
+            if (os === "Android") {
+                imonitorLink.href = "public/imonitor.apk";
+                imonitorLink.download = "imonitor.apk";
+                cargaSoltaLink.href = "public/carga_solta.apk";
+                cargaSoltaLink.download = "carga_solta.apk";
+                errorMessageElement.style.display = "none";
+            } else if (os === "iOS") {
+                imonitorLink.href = "#";
+                imonitorLink.removeAttribute("download");
+                cargaSoltaLink.href = "#";
+                cargaSoltaLink.removeAttribute("download");
+                errorMessageElement.innerHTML = "Os apps estão disponíveis apenas para Android.";
+                errorMessageElement.style.display = "block";
+            } else {
+                imonitorLink.href = "/public/imonitor.apk";
+                imonitorLink.download = "imonitor.apk";
+                cargaSoltaLink.href = "/public/carga_solta.apk";
+                cargaSoltaLink.download = "carga_solta.apk";
+                errorMessageElement.style.display = "none";
+            }
         }
 
-        return "unknown";
-      }
-
-      function setDownloadLink() {
-        var os = detectOS();
-        var linkElement = document.getElementById("download-link");
-        var errorMessageElement = document.getElementById("error-message");
-
-        if (os === "Android") {
-          linkElement.href = "public/imonitor.apk";
-          linkElement.download = "imonitor.apk";
-          errorMessageElement.style.display = "none";
-          linkElement.innerHTML =
-            "Clique aqui para baixar o app iMonitor para Android";
-        } else if (os === "iOS") {
-          linkElement.href = "#";
-          linkElement.removeAttribute("download");
-          linkElement.innerHTML = "Download não disponível";
-          errorMessageElement.innerHTML =
-            "O app está disponível apenas para Android.";
-          errorMessageElement.style.display = "block";
-        } else {
-          linkElement.href = "/public/imonitor.apk";
-          linkElement.download = "imonitor.apk";
-          errorMessageElement.style.display = "none";
-          linkElement.innerHTML =
-            "Clique aqui para baixar o app iMonitor para Android";
-        }
-      }
-
-      document.addEventListener("DOMContentLoaded", function () {
-        setDownloadLink();
-      });
+        document.addEventListener("DOMContentLoaded", function () {
+            setDownloadLinks();
+        });
     </script>
-  </head>
-  <body>
-    <div>
-      <img src="icon.png" alt="iMonitor" width="200" height="200" />
+</head>
+<body>
+    <div class="header">
+        <img src="fractal.png" alt="Fractal Logo" width="350">
     </div>
-    <div id="container">
-      <a id="download-link" class="download-link">
-        <img src="favicon.ico" alt="Baixar APK" width="64" height="64" />
-      </a>
-      <div id="error-message" class="error-message" style="display: none"></div>
+    
+    <img src="logo-header.png" alt="i-Monitor Logo" class="logo-header">
+    
+    <div class="button-container">
+        <a id="imonitor-download" class="download-button">Baixar i-Monitor (Android)</a>
+        <a id="carga-solta-download" class="download-button">Baixar Carga Solta (Android)</a>
     </div>
-  </body>
+    
+    <div id="error-message" class="error-message" style="display: none"></div>
+</body>
 </html>
