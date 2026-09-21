@@ -70,8 +70,8 @@ done
 
 # ---------------------------------------------------------------- Amplify (front)
 log "Amplify: ${FRONT_APP_NAME} (deploy manual, sem ligação com o GitHub)"
-FRONT_APP_ID=$(aws amplify list-apps --query "apps[?name=='${FRONT_APP_NAME}'].appId | [0]" --output text)
-if [ "${FRONT_APP_ID}" = "None" ] || [ -z "${FRONT_APP_ID}" ]; then
+FRONT_APP_ID=$(aws amplify list-apps --query "apps[?name=='${FRONT_APP_NAME}'].appId" --output text | awk 'NF && !f {print $1; f=1}')
+if [ -z "${FRONT_APP_ID}" ]; then
   FRONT_APP_ID=$(aws amplify create-app --name "${FRONT_APP_NAME}" --platform WEB \
     --description "Portal de Aplicativos - front HML (IMONITOR-1619)" \
     --custom-rules '[{"source":"</^[^.]+$|\\.(?!(css|gif|ico|jpg|jpeg|js|png|txt|svg|woff|woff2|ttf|map|json|webmanifest)$)([^.]+$)/>","target":"/index.html","status":"200"}]' \
@@ -88,8 +88,8 @@ WEB_URL="https://${FRONT_BRANCH}.${FRONT_APP_ID}.amplifyapp.com"
 
 # ---------------------------------------------------------------- API Gateway (id necessário para PUBLIC_URL)
 log "API Gateway HTTP: ${API_NAME}"
-API_ID=$(aws apigatewayv2 get-apis --query "Items[?Name=='${API_NAME}'].ApiId | [0]" --output text)
-if [ "${API_ID}" = "None" ] || [ -z "${API_ID}" ]; then
+API_ID=$(aws apigatewayv2 get-apis --query "Items[?Name=='${API_NAME}'].ApiId" --output text | awk 'NF && !f {print $1; f=1}')
+if [ -z "${API_ID}" ]; then
   API_ID=$(aws apigatewayv2 create-api --name "${API_NAME}" --protocol-type HTTP \
     --cors-configuration 'AllowOrigins=*,AllowMethods=*,AllowHeaders=*,ExposeHeaders=*,MaxAge=3600' \
     --tags "${TAGS_KV}" --query ApiId --output text)
@@ -133,9 +133,10 @@ for route in 'ANY /{proxy+}' 'OPTIONS /{proxy+}'; do
 done
 if ! aws apigatewayv2 get-stage --api-id "${API_ID}" --stage-name "${ENV_NAME}" >/dev/null 2>&1; then
   LOG_ARN="arn:aws:logs:${AWS_REGION}:${ACCOUNT_ID}:log-group:/aws/apigateway/${API_NAME}"
+  LOG_FORMAT='{"requestId":"$context.requestId","ip":"$context.identity.sourceIp","requestTime":"$context.requestTime","httpMethod":"$context.httpMethod","path":"$context.path","status":"$context.status","responseLength":"$context.responseLength"}'
+  LOG_SETTINGS=$(python3 -c 'import json,sys; print(json.dumps({"DestinationArn": sys.argv[1], "Format": sys.argv[2]}))' "${LOG_ARN}" "${LOG_FORMAT}")
   aws apigatewayv2 create-stage --api-id "${API_ID}" --stage-name "${ENV_NAME}" --auto-deploy \
-    --access-log-settings "DestinationArn=${LOG_ARN},Format={\"requestId\":\"\$context.requestId\",\"ip\":\"\$context.identity.sourceIp\",\"requestTime\":\"\$context.requestTime\",\"httpMethod\":\"\$context.httpMethod\",\"path\":\"\$context.path\",\"status\":\"\$context.status\",\"responseLength\":\"\$context.responseLength\"}" \
-    --tags "${TAGS_KV}" >/dev/null
+    --access-log-settings "${LOG_SETTINGS}" --tags "${TAGS_KV}" >/dev/null
   echo "stage ${ENV_NAME} criado"
 fi
 

@@ -13,9 +13,9 @@ FRONT_BRANCH=develop
 API_NAME=portal-apps-api-hml-api
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 
-APP_ID=$(aws amplify list-apps --query "apps[?name=='${FRONT_APP_NAME}'].appId | [0]" --output text)
-API_ID=$(aws apigatewayv2 get-apis --query "Items[?Name=='${API_NAME}'].ApiId | [0]" --output text)
-if [ "${APP_ID}" = "None" ] || [ "${API_ID}" = "None" ]; then
+APP_ID=$(aws amplify list-apps --query "apps[?name=='${FRONT_APP_NAME}'].appId" --output text | awk 'NF && !f {print $1; f=1}')
+API_ID=$(aws apigatewayv2 get-apis --query "Items[?Name=='${API_NAME}'].ApiId" --output text | awk 'NF && !f {print $1; f=1}')
+if [ -z "${APP_ID}" ] || [ -z "${API_ID}" ]; then
   echo "Infra não encontrada. Rode antes: ./deploy/hml/infra.sh" >&2
   exit 1
 fi
