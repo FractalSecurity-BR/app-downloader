@@ -1,0 +1,22 @@
+# Build spec do front HML para quando o app Amplify portal-apps-front-hml for ligado à branch develop
+# (colar em Amplify → App settings → Build settings). Fica fora da raiz de propósito: um amplify.yml
+# na raiz passaria a valer também para o app antigo (imonitor-download.fractal-security.com, branch main).
+version: 1
+applications:
+  - appRoot: web
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - npm ci --no-audit --no-fund
+        build:
+          commands:
+            # VITE_API_URL vem das variáveis de ambiente do app Amplify
+            - npm run build
+      artifacts:
+        baseDirectory: dist
+        files:
+          - '**/*'
+      cache:
+        paths:
+          - node_modules/**/*
