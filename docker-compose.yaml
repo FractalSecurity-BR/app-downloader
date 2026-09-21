@@ -1,0 +1,24 @@
+# Ambiente local completo: portal + backend de login falso + storage em disco.
+# Popular os APKs de exemplo antes: ./dev/seed.sh
+services:
+  fake-auth:
+    image: node:20-alpine
+    command: node /dev-tools/fake-auth.mjs
+    volumes:
+      - ./dev:/dev-tools:ro
+
+  portal:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      PORTAL_JWT_SECRET: dev-secret-dev-secret-dev-secret-123
+      PUBLIC_URL: http://localhost:3000
+      STORAGE_DRIVER: local
+      LOCAL_STORAGE_DIR: dev-storage
+      SYSTEMS_CONFIG_PATH: config/systems.docker.json
+    volumes:
+      - ./dev-storage:/app/dev-storage:ro
+      - ./config:/app/config:ro
+    depends_on:
+      - fake-auth

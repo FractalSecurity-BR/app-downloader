@@ -1,0 +1,112 @@
+name: Gerenciar app no portal
+
+# Operações manuais sobre os manifestos, sem tela administrativa.
+# Disparo: Actions → "Gerenciar app no portal" → Run workflow. Fica registrado quem executou.
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: "Operação"
+        type: choice
+        required: true
+        options:
+          - promote
+          - block
+          - unblock
+          - set-access
+          - show
+      system:
+        description: "Sistema"
+        type: choice
+        required: true
+        options:
+          - concursos
+          - containers-exportacao
+          - containers-importacao
+          - dta
+      app-id:
+        description: "Id do app (ex.: imonitor-costado). Não usado em show."
+        required: false
+      version:
+        description: "Versão (promote, block, unblock)"
+        required: false
+      environment:
+        description: "Ambiente de destino (promote)"
+        type: choice
+        required: false
+        options:
+          - prod
+          - hml
+          - staging
+      reason:
+        description: "Motivo do bloqueio (block)"
+        required: false
+      roles:
+        description: "set-access: perfis separados por vírgula. Vazio = não altera; none = libera para todos."
+        required: false
+      operator-types:
+        description: "set-access: tipos de operador separados por vírgula. Vazio = não altera; none = libera para todos."
+        required: false
+      customers:
+        description: "set-access: ids de empresa separados por vírgula. Vazio = não altera; none = libera para todas."
+        required: false
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: manifest-${{ inputs.system }}
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    environment: portal-apps
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.PORTAL_APPS_ROLE_ARN }}
+          aws-region: ${{ vars.PORTAL_APPS_AWS_REGION || 'sa-east-1' }}
+
+      - name: Instalar manifest-cli
+        working-directory: tools/manifest-cli
+        run: npm ci --omit=dev --no-audit --no-fund
+
+      - name: Executar
+        env:
+          STORAGE_DRIVER: s3
+          S3_BUCKET: ${{ vars.PORTAL_APPS_BUCKET }}
+          AWS_REGION: ${{ vars.PORTAL_APPS_AWS_REGION || 'sa-east-1' }}
+          IN_OPERATION: ${{ inputs.operation }}
+          IN_SYSTEM: ${{ inputs.system }}
+          IN_APP_ID: ${{ inputs.app-id }}
+          IN_VERSION: ${{ inputs.version }}
+          IN_ENVIRONMENT: ${{ inputs.environment }}
+          IN_REASON: ${{ inputs.reason }}
+          IN_ROLES: ${{ inputs.roles }}
+          IN_OPERATOR_TYPES: ${{ inputs.operator-types }}
+          IN_CUSTOMERS: ${{ inputs.customers }}
+        run: |
+          args=("$IN_OPERATION" --system "$IN_SYSTEM")
+          [ -n "$IN_APP_ID" ] && args+=(--app-id "$IN_APP_ID")
+          case "$IN_OPERATION" in
+            promote) args+=(--version "$IN_VERSION" --environment "$IN_ENVIRONMENT") ;;
+            block)   args+=(--version "$IN_VERSION"); [ -n "$IN_REASON" ] && args+=(--reason "$IN_REASON") ;;
+            unblock) args+=(--version "$IN_VERSION") ;;
+            set-access)
+              for pair in "roles:$IN_ROLES" "operator-types:$IN_OPERATOR_TYPES" "customers:$IN_CUSTOMERS"; do
+                flag="${pair%%:*}"; value="${pair#*:}"
+                [ -z "$value" ] && continue
+                [ "$value" = "none" ] && value=""
+                args+=("--$flag=$value")
+              done ;;
+          esac
+          node tools/manifest-cli/index.mjs "${args[@]}"
