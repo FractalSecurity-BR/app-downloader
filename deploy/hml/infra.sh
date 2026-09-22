@@ -19,6 +19,7 @@ ROLE_NAME="${NAME}-role"
 API_NAME="${NAME}-api"
 FRONT_APP_NAME="portal-apps-front-${ENV_NAME}"
 FRONT_BRANCH=develop
+BUCKET="fractal-portal-apps-${ENV_NAME}"   # APKs + manifestos (privado)
 TAGS_KV="Project=portal-apps,Environment=${ENV_NAME},Task=IMONITOR-1619,ManagedBy=deploy/hml/infra.sh"
 TAGS_JSON='{"Project":"portal-apps","Environment":"'"${ENV_NAME}"'","Task":"IMONITOR-1619","ManagedBy":"deploy/hml/infra.sh"}'
 
@@ -59,7 +60,48 @@ if ! aws iam get-role --role-name "${ROLE_NAME}" >/dev/null 2>&1; then
 else
   echo "já existe"
 fi
+# Leitura só neste bucket. ListBucket faz manifesto inexistente voltar 404 (e não 403).
+aws iam put-role-policy --role-name "${ROLE_NAME}" --policy-name "${NAME}-s3-read" --policy-document '{
+  "Version": "2012-10-17",
+  "Statement": [
+    {"Effect": "Allow", "Action": "s3:GetObject", "Resource": "arn:aws:s3:::'"${BUCKET}"'/*"},
+    {"Effect": "Allow", "Action": "s3:ListBucket", "Resource": "arn:aws:s3:::'"${BUCKET}"'"}
+  ]}'
 ROLE_ARN=$(aws iam get-role --role-name "${ROLE_NAME}" --query Role.Arn --output text)
+
+# ---------------------------------------------------------------- Bucket S3 (APKs e manifestos)
+# Custo baixo de propósito: S3 Standard, criptografia SSE-S3 (grátis; KMS cobra por requisição),
+# sem CloudFront, replicação, logs de acesso ou Object Lock. Versionamento só para proteger o
+# manifest.json (APKs nunca são sobrescritos) com expiração das versões antigas em 30 dias.
+log "S3: ${BUCKET}"
+if ! aws s3api head-bucket --bucket "${BUCKET}" >/dev/null 2>&1; then
+  aws s3api create-bucket --bucket "${BUCKET}" --create-bucket-configuration "LocationConstraint=${AWS_REGION}" \
+    --object-ownership BucketOwnerEnforced >/dev/null
+  echo "criado"
+else
+  echo "já existe"
+fi
+aws s3api put-public-access-block --bucket "${BUCKET}" \
+  --public-access-block-configuration BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
+aws s3api put-bucket-encryption --bucket "${BUCKET}" \
+  --server-side-encryption-configuration '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"},"BucketKeyEnabled":true}]}'
+aws s3api put-bucket-versioning --bucket "${BUCKET}" --versioning-configuration Status=Enabled
+aws s3api put-bucket-lifecycle-configuration --bucket "${BUCKET}" --lifecycle-configuration '{
+  "Rules": [
+    {"ID": "expira-versoes-antigas-30d", "Status": "Enabled", "Filter": {},
+     "NoncurrentVersionExpiration": {"NoncurrentDays": 30},
+     "Expiration": {"ExpiredObjectDeleteMarker": true}},
+    {"ID": "limpa-uploads-incompletos-1d", "Status": "Enabled", "Filter": {},
+     "AbortIncompleteMultipartUpload": {"DaysAfterInitiation": 1}}
+  ]}'
+aws s3api put-bucket-policy --bucket "${BUCKET}" --policy '{
+  "Version": "2012-10-17",
+  "Statement": [{"Sid": "SomenteHTTPS", "Effect": "Deny", "Principal": "*", "Action": "s3:*",
+    "Resource": ["arn:aws:s3:::'"${BUCKET}"'", "arn:aws:s3:::'"${BUCKET}"'/*"],
+    "Condition": {"Bool": {"aws:SecureTransport": "false"}}}]}'
+aws s3api put-bucket-tagging --bucket "${BUCKET}" \
+  --tagging "TagSet=[{Key=Project,Value=portal-apps},{Key=Environment,Value=${ENV_NAME}},{Key=Task,Value=IMONITOR-1619}]"
+echo "privado, SSE-S3, versionado (30 dias), só HTTPS"
 
 # ---------------------------------------------------------------- Logs
 log "CloudWatch Logs (retenção 14 dias, igual aos backends)"

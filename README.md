@@ -100,9 +100,12 @@ stage `hml`)**, com o front num app Amplify próprio. Tudo com prefixo `portal-a
 | IAM role (só logs) | `portal-apps-api-hml-role` |
 | API Gateway HTTP | `portal-apps-api-hml-api` (stage `hml`) |
 | Amplify (front) | `portal-apps-front-hml`, branch `develop` |
+| S3 (APKs e manifestos) | `fractal-portal-apps-hml` — privado, SSE-S3, só HTTPS, versões antigas expiram em 30 dias |
 
-Nesta primeira etapa **não há S3**: a Lambda usa `STORAGE_DRIVER=local` com APKs de demonstração gerados pelo
-`dev/seed.sh` dentro da imagem (`Dockerfile.lambda`). O login vai para os backends de HML
+O bucket foi montado para custo baixo: S3 Standard, criptografia SSE-S3 (sem KMS), sem CloudFront, replicação ou
+logs de acesso; uploads incompletos são limpos em 1 dia. Estimativa em HML: menos de US$ 0,50/mês (downloads cabem
+nos 100 GB/mês de saída gratuitos da AWS). Enquanto a Lambda não for trocada para `STORAGE_DRIVER=s3`, ela usa os
+APKs de demonstração gerados pelo `dev/seed.sh` dentro da imagem (`Dockerfile.lambda`). O login vai para os backends de HML
 (`config/systems.hml.json`).
 
 ```bash
