@@ -104,8 +104,12 @@ stage `hml`)**, com o front num app Amplify próprio. Tudo com prefixo `portal-a
 
 O bucket foi montado para custo baixo: S3 Standard, criptografia SSE-S3 (sem KMS), sem CloudFront, replicação ou
 logs de acesso; uploads incompletos são limpos em 1 dia. Estimativa em HML: menos de US$ 0,50/mês (downloads cabem
-nos 100 GB/mês de saída gratuitos da AWS). Enquanto a Lambda não for trocada para `STORAGE_DRIVER=s3`, ela usa os
-APKs de demonstração gerados pelo `dev/seed.sh` dentro da imagem (`Dockerfile.lambda`). O login vai para os backends de HML
+nos 100 GB/mês de saída gratuitos da AWS).
+
+Hoje o bucket guarda **só os manifestos**: por decisão do time, os APKs continuam no bucket `artefatos-mobile` e os
+manifestos apontam para eles por link (`--url`). A carga inicial está em `deploy/hml/catalogo-inicial.sh` (versões
+lidas de dentro de cada APK). Atenção: os arquivos do `artefatos-mobile` são sobrescritos a cada build com o mesmo
+nome, então o link de uma versão registrada passa a entregar o build mais novo daquele arquivo. O login vai para os backends de HML
 (`config/systems.hml.json`).
 
 ```bash

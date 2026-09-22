@@ -145,7 +145,7 @@ if ! aws lambda get-function --function-name "${NAME}" >/dev/null 2>&1; then
   JWT_SECRET=$(openssl rand -hex 32)
   aws lambda create-function --function-name "${NAME}" --package-type Image --code "ImageUri=${IMAGE_URI}" \
     --role "${ROLE_ARN}" --architectures x86_64 --memory-size 512 --timeout 30 \
-    --environment "Variables={NODE_ENV=production,PORTAL_JWT_SECRET=${JWT_SECRET},STORAGE_DRIVER=local,SYSTEMS_CONFIG_PATH=config/systems.hml.json,PUBLIC_URL=${API_URL},WEB_URL=${WEB_URL},CORS_ORIGINS=${WEB_URL}}" \
+    --environment "Variables={NODE_ENV=production,PORTAL_JWT_SECRET=${JWT_SECRET},STORAGE_DRIVER=s3,S3_BUCKET=${BUCKET},SYSTEMS_CONFIG_PATH=config/systems.hml.json,PUBLIC_URL=${API_URL},WEB_URL=${WEB_URL},CORS_ORIGINS=${WEB_URL}}" \
     --tags "${TAGS_KV}" >/dev/null
   aws lambda wait function-active-v2 --function-name "${NAME}"
   echo "criada"
