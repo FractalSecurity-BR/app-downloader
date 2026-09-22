@@ -71,8 +71,8 @@ ROLE_ARN=$(aws iam get-role --role-name "${ROLE_NAME}" --query Role.Arn --output
 
 # ---------------------------------------------------------------- Bucket S3 (APKs e manifestos)
 # Custo baixo de propósito: S3 Standard, criptografia SSE-S3 (grátis; KMS cobra por requisição),
-# sem CloudFront, replicação, logs de acesso ou Object Lock. Versionamento só para proteger o
-# manifest.json (APKs nunca são sobrescritos) com expiração das versões antigas em 30 dias.
+# sem CloudFront, replicação, logs de acesso ou Object Lock. Versionamento para proteger o
+# manifest.json (APKs nunca são sobrescritos); versões antigas são mantidas (sem expiração).
 log "S3: ${BUCKET}"
 if ! aws s3api head-bucket --bucket "${BUCKET}" >/dev/null 2>&1; then
   aws s3api create-bucket --bucket "${BUCKET}" --create-bucket-configuration "LocationConstraint=${AWS_REGION}" \
@@ -88,9 +88,6 @@ aws s3api put-bucket-encryption --bucket "${BUCKET}" \
 aws s3api put-bucket-versioning --bucket "${BUCKET}" --versioning-configuration Status=Enabled
 aws s3api put-bucket-lifecycle-configuration --bucket "${BUCKET}" --lifecycle-configuration '{
   "Rules": [
-    {"ID": "expira-versoes-antigas-30d", "Status": "Enabled", "Filter": {},
-     "NoncurrentVersionExpiration": {"NoncurrentDays": 30},
-     "Expiration": {"ExpiredObjectDeleteMarker": true}},
     {"ID": "limpa-uploads-incompletos-1d", "Status": "Enabled", "Filter": {},
      "AbortIncompleteMultipartUpload": {"DaysAfterInitiation": 1}}
   ]}'
@@ -101,7 +98,7 @@ aws s3api put-bucket-policy --bucket "${BUCKET}" --policy '{
     "Condition": {"Bool": {"aws:SecureTransport": "false"}}}]}'
 aws s3api put-bucket-tagging --bucket "${BUCKET}" \
   --tagging "TagSet=[{Key=Project,Value=portal-apps},{Key=Environment,Value=${ENV_NAME}},{Key=Task,Value=IMONITOR-1619}]"
-echo "privado, SSE-S3, versionado (30 dias), só HTTPS"
+echo "privado, SSE-S3, versionado, só HTTPS"
 
 # ---------------------------------------------------------------- Logs
 log "CloudWatch Logs (retenção 14 dias, igual aos backends)"

@@ -100,7 +100,7 @@ stage `hml`)**, com o front num app Amplify próprio. Tudo com prefixo `portal-a
 | IAM role (só logs) | `portal-apps-api-hml-role` |
 | API Gateway HTTP | `portal-apps-api-hml-api` (stage `hml`) |
 | Amplify (front) | `portal-apps-front-hml`, branch `develop` |
-| S3 (APKs e manifestos) | `fractal-portal-apps-hml` — privado, SSE-S3, só HTTPS, versões antigas expiram em 30 dias |
+| S3 (APKs e manifestos) | `fractal-portal-apps-hml` — privado, SSE-S3, só HTTPS, versionado (versões antigas mantidas) |
 
 O bucket foi montado para custo baixo: S3 Standard, criptografia SSE-S3 (sem KMS), sem CloudFront, replicação ou
 logs de acesso; uploads incompletos são limpos em 1 dia. Estimativa em HML: menos de US$ 0,50/mês (downloads cabem
