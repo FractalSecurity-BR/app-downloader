@@ -41,16 +41,24 @@ export class StorageService {
     }
   }
 
-  async downloadTarget(key: string, filename: string): Promise<DownloadTarget> {
+  /**
+   * `sourceBucket` preenchido = APK reaproveitado de outro bucket. Só é aceito se estiver em
+   * ALLOWED_SOURCE_BUCKETS (a role da API também precisa de s3:GetObject nele).
+   */
+  async downloadTarget(key: string, filename: string, sourceBucket?: string): Promise<DownloadTarget> {
+    if (sourceBucket && !this.config.storage.allowedSourceBuckets.includes(sourceBucket)) {
+      throw new Error(`Bucket de origem não liberado em ALLOWED_SOURCE_BUCKETS: ${sourceBucket}`);
+    }
     if (!this.s3) {
-      const full = this.localPath(key);
+      // Em desenvolvimento, outros buckets são simulados em <LOCAL_STORAGE_DIR>/_buckets/<bucket>/.
+      const full = this.localPath(sourceBucket ? `_buckets/${sourceBucket}/${key}` : key);
       await stat(full);
       return { kind: 'file', path: full };
     }
     const url = await getSignedUrl(
       this.s3,
       new GetObjectCommand({
-        Bucket: this.config.storage.bucket,
+        Bucket: sourceBucket ?? this.config.storage.bucket,
         Key: key,
         ResponseContentDisposition: `attachment; filename="${filename}"`,
         ResponseContentType: 'application/vnd.android.package-archive',

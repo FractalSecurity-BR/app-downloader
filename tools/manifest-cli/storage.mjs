@@ -59,6 +59,12 @@ class LocalStorage {
     await writeFile(full, await readFile(filePath));
   }
 
+  // Outros buckets são simulados em <LOCAL_STORAGE_DIR>/_buckets/<bucket>/<key>.
+  async headExternal(bucket, key) {
+    const info = await stat(this.#path(`_buckets/${bucket}/${key}`)).catch(() => null);
+    return info ? { sizeBytes: info.size } : null;
+  }
+
   async sha256Of(key) {
     try {
       return createHash('sha256').update(await readFile(this.#path(key))).digest('hex');
@@ -131,6 +137,18 @@ class S3Storage {
       );
     } catch (err) {
       if (isConflict(err)) throw new ConflictError(key);
+      throw err;
+    }
+  }
+
+  // Confere se o APK existe em outro bucket (reaproveitamento) e devolve o tamanho.
+  async headExternal(bucket, key) {
+    const s3 = await this.#client();
+    try {
+      const res = await s3.send(new this.sdk.HeadObjectCommand({ Bucket: bucket, Key: key }));
+      return { sizeBytes: res.ContentLength };
+    } catch (err) {
+      if (err.name === 'NotFound' || err.$metadata?.httpStatusCode === 404) return null;
       throw err;
     }
   }

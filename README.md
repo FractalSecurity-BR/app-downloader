@@ -157,6 +157,22 @@ Regras aplicadas pelo CLI:
 Como este repositório é privado, em *Settings → Actions → General → Access* ele precisa estar liberado para os
 repositórios da organização.
 
+### Origem do APK
+
+Cada versão no manifesto aponta para o APK de um destes jeitos (exatamente um):
+
+| Origem | Como publicar | Download | Quando usar |
+|---|---|---|---|
+| **Bucket do portal** (padrão) | `publish --file ./app.apk` | Link assinado (5 min) | Builds novos, pelo GitHub Actions |
+| **Outro bucket** (reaproveitamento) | `publish --source-bucket <bucket> --source-key <caminho>.apk` | Link assinado (5 min), sem copiar o arquivo | APKs que já existem hoje em outro bucket |
+| **Link externo** | `publish --url https://.../app.apk` | Redireciona para a URL | Decisão de publicar fora da AWS |
+
+- **Outro bucket:** o bucket precisa estar em `ALLOWED_SOURCE_BUCKETS` e a role da API precisa de `s3:GetObject` nele;
+  caso contrário o download é recusado. O CLI confere se o APK existe antes de registrar.
+- **Link externo:** o portal ainda exige login e aplica as regras de acesso para mostrar e liberar o download, mas o
+  destino fica visível para quem baixa e pode ser repassado; o portal também não garante que o arquivo não mude na
+  origem. Só `https` é aceito.
+
 ## Operações manuais
 
 GitHub → Actions → **Gerenciar app no portal** → *Run workflow*:

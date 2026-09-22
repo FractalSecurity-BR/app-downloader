@@ -2,7 +2,11 @@
 // CLI que mantém os manifestos do Portal de Aplicativos.
 // Usado pela action .github/actions/publish-app e pelos workflows manuais.
 //
-//   publish     --system --app-id --version --environment --file [--app-name --description --build --release-notes --commit --created-by]
+//   publish     --system --app-id --version --environment <origem> [--app-name --description --build --release-notes --commit --created-by]
+//               <origem> é uma destas:
+//                 --file ./app.apk                          envia o APK para o bucket do portal (padrão)
+//                 --source-bucket B --source-key k/app.apk  reaproveita um APK que já está em outro bucket (sem copiar)
+//                 --url https://.../app.apk                 link externo (o portal só redireciona)
 //   promote     --system --app-id --version --environment
 //   block       --system --app-id --version [--reason]
 //   unblock     --system --app-id --version
@@ -45,6 +49,9 @@ const { positionals, values } = parseArgs({
     build: { type: 'string' },
     environment: { type: 'string' },
     file: { type: 'string' },
+    'source-bucket': { type: 'string' },
+    'source-key': { type: 'string' },
+    url: { type: 'string' },
     'release-notes': { type: 'string' },
     commit: { type: 'string' },
     'created-by': { type: 'string' },
@@ -103,8 +110,6 @@ async function publish(storage) {
   const appId = required('app-id');
   const version = required('version');
   const environment = required('environment');
-  const filePath = required('file');
-  const file = apkKey(system, appId, version);
   const slug = /^[a-z0-9]+(-[a-z0-9]+)*$/;
   if (!slug.test(system)) throw new ManifestError(`--system deve ser minúsculo com hífens (ex.: containers-exportacao): ${system}`);
   if (!slug.test(appId)) throw new ManifestError(`--app-id deve ser minúsculo com hífens (ex.: imonitor-costado): ${appId}`);
@@ -118,24 +123,14 @@ async function publish(storage) {
     build = Number(values.build);
   }
 
+  const modes = [values.file, values['source-bucket'] ?? values['source-key'], values.url].filter((v) => v !== undefined);
+  if (modes.length !== 1) {
+    throw new ManifestError('Informe exatamente uma origem: --file, --source-bucket + --source-key, ou --url');
+  }
+
   const { data } = await storage.readJson(`${system}/manifest.json`);
   if (data?.apps.some((a) => a.id === appId && a.versions.some((v) => v.version === version))) {
     throw new ManifestError(`Versão "${version}" do app "${appId}" já foi publicada. Gere uma versão nova.`);
-  }
-
-  const { size } = await stat(filePath);
-  const hash = await sha256(filePath);
-  console.log(`Enviando ${filePath} → ${file} (${(size / 1024 / 1024).toFixed(1)} MB)`);
-  try {
-    await storage.uploadNew(file, filePath, hash);
-  } catch (err) {
-    if (!(err instanceof ConflictError)) throw err;
-    // Arquivo já existe mas a versão não está no manifesto: uma execução anterior
-    // subiu o APK e falhou antes de gravar o manifesto. Só retoma se for o mesmo binário.
-    if ((await storage.sha256Of(file)) !== hash) {
-      throw new ManifestError(`O arquivo ${file} já existe no bucket com outro conteúdo. Gere uma versão nova.`);
-    }
-    console.warn(`APK idêntico já estava no bucket (execução anterior interrompida). Registrando no manifesto.`);
   }
 
   const release = {
@@ -144,14 +139,51 @@ async function publish(storage) {
     description: values.description,
     version,
     environment,
-    file,
-    sizeBytes: size,
-    sha256: hash,
     releaseNotes: values['release-notes']?.trim() || undefined,
     commit: values.commit,
     createdBy: values['created-by'],
   };
   if (build !== undefined) release.build = build;
+
+  if (values.url !== undefined) {
+    // Link externo: nada é enviado. O portal redireciona para ele depois do login.
+    const url = values.url.trim();
+    if (!/^https:\/\/\S+$/.test(url)) throw new ManifestError(`--url precisa ser https: ${url}`);
+    console.warn('Atenção: link externo fica visível para quem baixa e pode ser repassado sem login.');
+    release.url = url;
+  } else if (values['source-bucket'] !== undefined || values['source-key'] !== undefined) {
+    // APK que já existe em outro bucket: nada é copiado; o portal gera link assinado a partir dele.
+    const bucket = required('source-bucket');
+    const key = required('source-key').replace(/^\/+/, '');
+    if (!key.endsWith('.apk')) throw new ManifestError(`--source-key precisa apontar para um .apk: ${key}`);
+    const head = await storage.headExternal(bucket, key);
+    if (head === null) throw new ManifestError(`APK não encontrado em s3://${bucket}/${key}`);
+    if (head.sizeBytes !== undefined) release.sizeBytes = head.sizeBytes;
+    console.log(`Referenciando s3://${bucket}/${key} (sem cópia)`);
+    release.bucket = bucket;
+    release.file = key;
+  } else {
+    const filePath = required('file');
+    const file = apkKey(system, appId, version);
+    const { size } = await stat(filePath);
+    const hash = await sha256(filePath);
+    console.log(`Enviando ${filePath} → ${file} (${(size / 1024 / 1024).toFixed(1)} MB)`);
+    try {
+      await storage.uploadNew(file, filePath, hash);
+    } catch (err) {
+      if (!(err instanceof ConflictError)) throw err;
+      // Arquivo já existe mas a versão não está no manifesto: uma execução anterior
+      // subiu o APK e falhou antes de gravar o manifesto. Só retoma se for o mesmo binário.
+      if ((await storage.sha256Of(file)) !== hash) {
+        throw new ManifestError(`O arquivo ${file} já existe no bucket com outro conteúdo. Gere uma versão nova.`);
+      }
+      console.warn(`APK idêntico já estava no bucket (execução anterior interrompida). Registrando no manifesto.`);
+    }
+    release.file = file;
+    release.sizeBytes = size;
+    release.sha256 = hash;
+  }
+
   return updateManifest(storage, system, (m) => applyPublish(m, release));
 }
 

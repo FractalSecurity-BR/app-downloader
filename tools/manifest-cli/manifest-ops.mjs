@@ -51,8 +51,9 @@ function touch(manifest) {
 }
 
 /**
- * Registra uma versão nova (o APK já deve ter sido enviado para `release.file`)
- * e a torna a atual no ambiente informado. Cria o app se ainda não existir.
+ * Registra uma versão nova e a torna a atual no ambiente informado. Cria o app se ainda não existir.
+ * Origem do APK: `file` (já enviado ao bucket do portal), `bucket` + `file` (APK que já existe em
+ * outro bucket) ou `url` (link externo).
  */
 export function applyPublish(manifest, release) {
   assertEnvironment(release.environment);
@@ -81,7 +82,9 @@ export function applyPublish(manifest, release) {
     version: release.version,
     environments: [release.environment],
     status: 'published',
-    file: release.file,
+    // Origem do APK (exatamente uma): bucket do portal (file), outro bucket (bucket + file) ou link externo (url).
+    ...(release.url ? { url: release.url } : { file: release.file }),
+    ...(release.bucket ? { bucket: release.bucket } : {}),
     createdAt: new Date().toISOString(),
     createdBy: release.createdBy ?? 'manifest-cli',
   };

@@ -5,14 +5,28 @@
   "description": "Um arquivo por sistema, em s3://<bucket>/<system>/manifest.json. Escrito apenas pelo tools/manifest-cli (GitHub Actions) e lido pela API do portal.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "system", "updatedAt", "apps"],
+  "required": [
+    "schemaVersion",
+    "system",
+    "updatedAt",
+    "apps"
+  ],
   "properties": {
-    "schemaVersion": { "const": 1 },
-    "system": { "$ref": "#/definitions/slug" },
-    "updatedAt": { "type": "string", "format": "date-time" },
+    "schemaVersion": {
+      "const": 1
+    },
+    "system": {
+      "$ref": "#/definitions/slug"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
     "apps": {
       "type": "array",
-      "items": { "$ref": "#/definitions/app" }
+      "items": {
+        "$ref": "#/definitions/app"
+      }
     }
   },
   "definitions": {
@@ -22,73 +36,212 @@
     },
     "environment": {
       "type": "string",
-      "enum": ["hml", "staging", "prod"]
+      "enum": [
+        "hml",
+        "staging",
+        "prod"
+      ]
     },
     "stringList": {
       "type": "array",
-      "items": { "type": "string", "minLength": 1 },
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
       "uniqueItems": true
     },
     "app": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "name", "platform", "access", "current", "versions"],
+      "required": [
+        "id",
+        "name",
+        "platform",
+        "access",
+        "current",
+        "versions"
+      ],
       "properties": {
-        "id": { "$ref": "#/definitions/slug" },
-        "name": { "type": "string", "minLength": 1 },
-        "description": { "type": "string" },
-        "platform": { "const": "android" },
+        "id": {
+          "$ref": "#/definitions/slug"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "platform": {
+          "const": "android"
+        },
         "access": {
           "description": "Lista vazia = sem restrição naquele critério. Usuário Master sempre enxerga tudo.",
           "type": "object",
           "additionalProperties": false,
-          "required": ["roles", "operatorTypes", "customers"],
+          "required": [
+            "roles",
+            "operatorTypes",
+            "customers"
+          ],
           "properties": {
-            "roles": { "$ref": "#/definitions/stringList" },
-            "operatorTypes": { "$ref": "#/definitions/stringList" },
-            "customers": { "$ref": "#/definitions/stringList" }
+            "roles": {
+              "$ref": "#/definitions/stringList"
+            },
+            "operatorTypes": {
+              "$ref": "#/definitions/stringList"
+            },
+            "customers": {
+              "$ref": "#/definitions/stringList"
+            }
           }
         },
         "current": {
           "description": "Versão exibida como atual em cada ambiente.",
           "type": "object",
           "additionalProperties": false,
-          "propertyNames": { "$ref": "#/definitions/environment" },
+          "propertyNames": {
+            "$ref": "#/definitions/environment"
+          },
           "patternProperties": {
-            "^(hml|staging|prod)$": { "type": "string", "minLength": 1 }
+            "^(hml|staging|prod)$": {
+              "type": "string",
+              "minLength": 1
+            }
           }
         },
         "versions": {
           "type": "array",
-          "items": { "$ref": "#/definitions/version" }
+          "items": {
+            "$ref": "#/definitions/version"
+          }
         }
       }
     },
     "version": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["version", "environments", "status", "file", "createdAt", "createdBy"],
+      "required": [
+        "version",
+        "environments",
+        "status",
+        "createdAt",
+        "createdBy"
+      ],
       "properties": {
-        "version": { "type": "string", "pattern": "^[0-9A-Za-z.+_-]+$" },
-        "build": { "type": "integer", "minimum": 0 },
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9A-Za-z.+_-]+$"
+        },
+        "build": {
+          "type": "integer",
+          "minimum": 0
+        },
         "environments": {
           "type": "array",
-          "items": { "$ref": "#/definitions/environment" },
+          "items": {
+            "$ref": "#/definitions/environment"
+          },
           "uniqueItems": true
         },
-        "status": { "type": "string", "enum": ["published", "blocked"] },
-        "file": {
-          "description": "Chave do APK no bucket, relativa à raiz do bucket.",
+        "status": {
           "type": "string",
-          "pattern": "^[a-z0-9-]+/[a-z0-9-]+/[^/]+/[^/]+\\.apk$"
+          "enum": [
+            "published",
+            "blocked"
+          ]
         },
-        "sizeBytes": { "type": "integer", "minimum": 0 },
-        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
-        "releaseNotes": { "type": "string" },
-        "commit": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "createdBy": { "type": "string", "minLength": 1 },
-        "blockedReason": { "type": "string" }
+        "file": {
+          "description": "Chave do APK no bucket. Sem `bucket`: bucket do portal (<sistema>/<app>/<versão>/<arquivo>.apk). Com `bucket`: caminho do APK nesse outro bucket.",
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[^/].*\\.apk$"
+        },
+        "bucket": {
+          "description": "Bucket S3 onde o APK já está (reaproveitamento). O portal gera link assinado a partir dele; precisa estar liberado em ALLOWED_SOURCE_BUCKETS e na role da API.",
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$"
+        },
+        "url": {
+          "description": "Link externo (https) para o APK. O portal só redireciona: o link fica visível para quem baixa e pode ser repassado.",
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://"
+        },
+        "sizeBytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "releaseNotes": {
+          "type": "string"
+        },
+        "commit": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdBy": {
+          "type": "string",
+          "minLength": 1
+        },
+        "blockedReason": {
+          "type": "string"
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "file"
+          ],
+          "not": {
+            "required": [
+              "url"
+            ]
+          }
+        },
+        {
+          "required": [
+            "url"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "bucket"
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "if": {
+        "required": [
+          "file"
+        ],
+        "not": {
+          "required": [
+            "bucket"
+          ]
+        }
+      },
+      "then": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+/[a-z0-9-]+/[^/]+/[^/]+\\.apk$"
+          }
+        }
       }
     }
   }

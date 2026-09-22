@@ -14,7 +14,10 @@ export interface ManifestVersion {
   build?: number;
   environments: EnvironmentId[];
   status: 'published' | 'blocked';
-  file: string;
+  /** Origem do APK — exatamente uma: `file` (bucket do portal), `bucket` + `file` (outro bucket) ou `url` (link externo). */
+  file?: string;
+  bucket?: string;
+  url?: string;
   sizeBytes?: number;
   sha256?: string;
   releaseNotes?: string;

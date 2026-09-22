@@ -41,11 +41,23 @@ export class DownloadsController {
       return res.redirect(302, `${this.config.webUrl}/link-expirado?motivo=indisponivel`);
     }
 
+    const log = `user=${grant.username} system=${grant.systemId} env=${grant.environment} app=${grant.appId} version=${grant.version}`;
+
+    // Link externo: decisão explícita de publicar fora do bucket; o portal só redireciona.
+    if (version.url) {
+      this.logger.log(`download ${log} origem=externa`);
+      return res.redirect(302, version.url);
+    }
+
     const filename = `${grant.appId}-${grant.version}.apk`;
-    const target = await this.storage.downloadTarget(version.file, filename);
-    this.logger.log(
-      `download user=${grant.username} system=${grant.systemId} env=${grant.environment} app=${grant.appId} version=${grant.version}`,
-    );
+    let target;
+    try {
+      target = await this.storage.downloadTarget(version.file!, filename, version.bucket);
+    } catch (err) {
+      this.logger.error(`download falhou ${log}: ${(err as Error).message}`);
+      return res.redirect(302, `${this.config.webUrl}/link-expirado?motivo=indisponivel`);
+    }
+    this.logger.log(`download ${log} origem=${version.bucket ? `bucket:${version.bucket}` : 'portal'}`);
 
     if (target.kind === 'redirect') return res.redirect(302, target.url);
     return res.download(target.path, filename, { headers: { 'Content-Type': 'application/vnd.android.package-archive' } });

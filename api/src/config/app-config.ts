@@ -26,6 +26,8 @@ export interface AppConfig {
   storage: {
     driver: StorageDriver;
     bucket?: string;
+    /** Outros buckets de onde o portal pode servir APKs já existentes (reaproveitamento). */
+    allowedSourceBuckets: string[];
     region: string;
     localDir: string;
   };
@@ -80,6 +82,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     storage: {
       driver,
       bucket: env.S3_BUCKET,
+      allowedSourceBuckets: (env.ALLOWED_SOURCE_BUCKETS ?? '')
+        .split(',')
+        .map((b) => b.trim())
+        .filter(Boolean),
       region: env.AWS_REGION ?? 'sa-east-1',
       localDir: fromRoot(env.LOCAL_STORAGE_DIR, 'dev-storage'),
     },

@@ -48,6 +48,11 @@ function startUpstream(): Promise<Server> {
 
 const SYSTEM = 'containers-exportacao';
 
+function omitFile<T extends { file?: string }>(v: T) {
+  const { file: _file, ...rest } = v;
+  return rest;
+}
+
 function version(v: string, environments: string[], status = 'published') {
   return {
     version: v,
@@ -85,6 +90,10 @@ describe('Portal de Aplicativos (e2e)', () => {
       mkdirSync(path.join(storage, SYSTEM, 'imonitor', v), { recursive: true });
       writeFileSync(path.join(storage, SYSTEM, 'imonitor', v, `imonitor-${v}.apk`), `apk-${v}`);
     }
+    // APK reaproveitado de outro bucket (simulado em _buckets/ no modo local)
+    mkdirSync(path.join(storage, '_buckets', 'bucket-antigo', 'apps'), { recursive: true });
+    writeFileSync(path.join(storage, '_buckets', 'bucket-antigo', 'apps', 'imonitor-antigo.apk'), 'apk-bucket-antigo');
+
     writeFileSync(
       path.join(storage, SYSTEM, 'manifest.json'),
       JSON.stringify({
@@ -98,7 +107,23 @@ describe('Portal de Aplicativos (e2e)', () => {
             platform: 'android',
             access: { roles: [], operatorTypes: [], customers: [] },
             current: { prod: '1.0.0', hml: '1.1.0' },
-            versions: [version('1.0.0', ['hml', 'prod']), version('1.1.0', ['hml']), version('1.2.0', ['hml', 'prod'], 'blocked')],
+            versions: [
+              version('0.8.0', ['prod']),
+              version('0.9.0', ['prod']),
+              version('0.9.5', ['prod']),
+              version('1.0.0', ['hml', 'prod']),
+              version('1.1.0', ['hml']),
+              version('1.2.0', ['hml', 'prod'], 'blocked'),
+            ].map((v) =>
+              // origens alternativas: outro bucket liberado, outro bucket NÃO liberado e link externo
+              v.version === '0.8.0'
+                ? { ...v, bucket: 'bucket-antigo', file: 'apps/imonitor-antigo.apk' }
+                : v.version === '0.9.0'
+                  ? { ...v, bucket: 'bucket-desconhecido', file: 'apps/x.apk' }
+                  : v.version === '0.9.5'
+                    ? { ...omitFile(v), url: 'https://externo.test/imonitor-0.9.5.apk' }
+                    : v,
+            ),
           },
           {
             id: 'costado',
@@ -121,6 +146,7 @@ describe('Portal de Aplicativos (e2e)', () => {
       WEB_DIST_PATH: path.join(dir, 'sem-front'),
       MANIFEST_CACHE_SECONDS: '1',
       LOGIN_RATE_LIMIT_PER_MINUTE: '50',
+      ALLOWED_SOURCE_BUCKETS: 'bucket-antigo',
     });
     const moduleRef = await Test.createTestingModule({ imports: [AppModule.forRoot(config)] }).compile();
     app = moduleRef.createNestApplication<NestExpressApplication>();
@@ -188,7 +214,8 @@ describe('Portal de Aplicativos (e2e)', () => {
     expect(apps).toHaveLength(1);
     expect(apps[0].id).toBe('imonitor');
     expect(apps[0].channels).toHaveLength(1);
-    expect(apps[0].channels[0]).toMatchObject({ environment: { id: 'prod', name: 'Produção' }, current: { version: '1.0.0' }, previous: [] });
+    expect(apps[0].channels[0]).toMatchObject({ environment: { id: 'prod', name: 'Produção' }, current: { version: '1.0.0' } });
+    expect(apps[0].channels[0].previous.map((v: any) => v.version)).toEqual(['0.9.5', '0.9.0', '0.8.0']);
   });
 
   it('Master vê os apps restritos e também o canal de homologação', async () => {
@@ -234,6 +261,29 @@ describe('Portal de Aplicativos (e2e)', () => {
       const res = await request(app.getHttpServer()).get(`/d/${t}`).expect(302);
       expect(res.headers.location).toBe('http://portal.test/link-expirado');
     }
+  });
+
+  it('APK reaproveitado de outro bucket liberado é entregue normalmente', async () => {
+    const { token } = (await login('operador').expect(200)).body;
+    const link = await linkFor(token, 'imonitor', '0.8.0').expect(200);
+    const file = await download(link.body.url);
+    expect(file.status).toBe(200);
+    expect(file.headers['content-disposition']).toContain('imonitor-0.8.0.apk');
+    expect(file.body).toBe('apk-bucket-antigo');
+  });
+
+  it('bucket de origem fora de ALLOWED_SOURCE_BUCKETS não é servido', async () => {
+    const { token } = (await login('operador').expect(200)).body;
+    const link = await linkFor(token, 'imonitor', '0.9.0').expect(200);
+    const res = await request(app.getHttpServer()).get(new URL(link.body.url).pathname).expect(302);
+    expect(res.headers.location).toBe('http://portal.test/link-expirado?motivo=indisponivel');
+  });
+
+  it('link externo: depois do token o portal redireciona para a URL publicada', async () => {
+    const { token } = (await login('operador').expect(200)).body;
+    const link = await linkFor(token, 'imonitor', '0.9.5').expect(200);
+    const res = await request(app.getHttpServer()).get(new URL(link.body.url).pathname).expect(302);
+    expect(res.headers.location).toBe('https://externo.test/imonitor-0.9.5.apk');
   });
 
   it('link de download não serve como sessão', async () => {

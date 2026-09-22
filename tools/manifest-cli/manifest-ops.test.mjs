@@ -48,6 +48,32 @@ test('publish cria o app, registra a versão e a torna atual no ambiente', () =>
   assert.ok(validate(m), JSON.stringify(validate.errors));
 });
 
+test('publish aceita APK em outro bucket e link externo', () => {
+  let m = applyPublish(emptyManifest('containers-exportacao'), { ...release('1.0.0'), file: 'apps/imonitor.apk', bucket: 'bucket-antigo' });
+  m = applyPublish(m, { ...release('1.1.0'), file: undefined, sha256: undefined, sizeBytes: undefined, url: 'https://exemplo.com/imonitor.apk' });
+  const [antigo, externo] = m.apps[0].versions;
+  assert.equal(antigo.bucket, 'bucket-antigo');
+  assert.equal(antigo.file, 'apps/imonitor.apk');
+  assert.equal(externo.url, 'https://exemplo.com/imonitor.apk');
+  assert.equal(externo.file, undefined);
+  assert.ok(validate(m), JSON.stringify(validate.errors));
+});
+
+test('schema recusa versão sem origem, com duas origens ou link sem https', () => {
+  const base = withVersions('1.0.0');
+  const v = base.apps[0].versions[0];
+  for (const broken of [
+    { ...v, file: undefined },
+    { ...v, url: 'https://exemplo.com/a.apk' },
+    { ...v, file: undefined, url: 'http://exemplo.com/a.apk' },
+    { ...v, file: 'caminho/livre.apk' },
+  ]) {
+    const m = structuredClone(base);
+    m.apps[0].versions[0] = JSON.parse(JSON.stringify(broken));
+    assert.equal(validate(m), false, JSON.stringify(broken));
+  }
+});
+
 test('publish não aceita a mesma versão duas vezes', () => {
   assert.throws(() => applyPublish(withVersions('1.0.0'), release('1.0.0')), ManifestError);
 });
