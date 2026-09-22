@@ -41,6 +41,10 @@ else
   echo "já existe"
 fi
 
+# Custo: cada deploy deixa a imagem anterior sem tag; remove depois de 1 dia.
+aws ecr put-lifecycle-policy --repository-name "${NAME}" --lifecycle-policy-text \
+  '{"rules":[{"rulePriority":1,"description":"remove imagens sem tag (deploys antigos) apos 1 dia","selection":{"tagStatus":"untagged","countType":"sinceImagePushed","countUnit":"days","countNumber":1},"action":{"type":"expire"}}]}' >/dev/null
+
 # ---------------------------------------------------------------- Imagem
 if ! aws ecr describe-images --repository-name "${NAME}" --image-ids imageTag=latest >/dev/null 2>&1; then
   log "Primeira imagem (a Lambda em container precisa de uma imagem para ser criada)"
