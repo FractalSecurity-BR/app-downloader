@@ -3,9 +3,12 @@ import { FormEvent, useEffect, useState } from 'react';
 import { Shell, Steps } from '../components/Shell';
 import { api, ApiError, PortalSystem } from '../lib/api';
 import { navigate } from '../lib/router';
-import { loadSession, saveSession } from '../lib/session';
+import { clearSession, loadSession, saveSession } from '../lib/session';
 
 export function LoginScreen({ systemId }: { systemId: string }) {
+  // Sessão já aberta neste sistema: não entra direto: o perfil pode ter mudado no sistema
+  // desde o login (a sessão carrega o perfil de quando foi criada) e pode ser outra pessoa.
+  const [current, setCurrent] = useState(() => loadSession(systemId));
   const [system, setSystem] = useState<PortalSystem | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [username, setUsername] = useState('');
@@ -17,10 +20,6 @@ export function LoginScreen({ systemId }: { systemId: string }) {
   );
 
   useEffect(() => {
-    if (loadSession(systemId)) {
-      navigate(`/${systemId}/apps`, true);
-      return;
-    }
     api.systems().then(
       (systems) => {
         const found = systems.find((s) => s.id === systemId && s.available);
@@ -81,6 +80,29 @@ export function LoginScreen({ systemId }: { systemId: string }) {
         </div>
       }
     >
+      {current && (
+        <div className="alert alert--info reveal" role="note">
+          <span>
+            Você já está conectado como <strong>{current.user.username}</strong> ({current.user.profile}).
+          </span>
+          <span className="actions">
+            <button type="button" className="btn btn--primary btn--sm" onClick={() => navigate(`/${systemId}/apps`)}>
+              Continuar
+            </button>
+            <button
+              type="button"
+              className="link"
+              onClick={() => {
+                clearSession();
+                setCurrent(null);
+              }}
+            >
+              Entrar com outro usuário
+            </button>
+          </span>
+        </div>
+      )}
+
       <div className="split reveal" style={{ animationDelay: '80ms' }}>
         <div className="split__text">
           <p className="kicker">Login do sistema</p>

@@ -103,7 +103,10 @@ export function AppsScreen({ systemId }: { systemId: string }) {
           <div className="hero__row">
             <h1 className="hero__title">Aplicativos</h1>
             <div className="hero__user">
-              <span>{session.user.username}</span>
+              {/* perfil visível: a sessão guarda o perfil de quando o login foi feito */}
+              <span>
+                {session.user.username} · {session.user.profile}
+              </span>
               <button type="button" className="btn btn--outline btn--sm" onClick={logout}>
                 Sair
               </button>
