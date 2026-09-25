@@ -38,10 +38,9 @@ publica containers-exportacao imonitor-costado "I-monitor Costado" "Leitura de c
 publica containers-exportacao carga-solta "Carga Solta" "Conferência de carga solta" 1.13.5 119 prod carga-solta.apk
 publica containers-exportacao carga-solta "Carga Solta" "Conferência de carga solta" 1.13.21-csHml 119 hml app-cshml-release.apk
 
-# Importador: mesmo APK do i-monitor-importacao-app, mas usado por quem tem usuário do
-# Containers Exportação (perfil ExternalAgent) para ler a chegada do container.
-publica containers-exportacao imonitor-importador "I-monitor Importador" "Leitura da chegada do container pelo importador" 1.13.18-hml 119 hml imonitor-importacao-homolog.apk
-publica containers-exportacao imonitor-importador "I-monitor Importador" "Leitura da chegada do container pelo importador" 1.13.18-staging 119 staging imonitor-importacao-staging.apk
+# Importador: flavor do próprio i-monitor-app, usado por quem tem usuário do Containers
+# Exportação com perfil ExternalAgent para ler a chegada do container. Só há build de staging.
+publica containers-exportacao imonitor-importador "I-monitor Importador" "Leitura da chegada do container pelo importador" 1.13.28-importadorStaging 119 staging app-importadorstaging-release.apk
 
 # ---- DTA (ainda sem APK de produção no artefatos-mobile)
 publica dta imonitor-dta "I-monitor DTA" "Lacração e liberação de DTA" 1.13.27-hml 119 hml app-homologation-release.apk
