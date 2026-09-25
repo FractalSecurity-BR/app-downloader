@@ -38,9 +38,10 @@ publica containers-exportacao imonitor-costado "I-monitor Costado" "Leitura de c
 publica containers-exportacao carga-solta "Carga Solta" "Conferência de carga solta" 1.13.5 119 prod carga-solta.apk
 publica containers-exportacao carga-solta "Carga Solta" "Conferência de carga solta" 1.13.21-csHml 119 hml app-cshml-release.apk
 
-# ---- Containers Importação (backend e banco próprios; ainda sem APK de produção)
-publica containers-importacao imonitor-importacao "I-monitor Importação" "Anel de importação" 1.13.18-hml 119 hml imonitor-importacao-homolog.apk
-publica containers-importacao imonitor-importacao "I-monitor Importação" "Anel de importação" 1.13.18-staging 119 staging imonitor-importacao-staging.apk
+# Importador: mesmo APK do i-monitor-importacao-app, mas usado por quem tem usuário do
+# Containers Exportação (perfil ExternalAgent) para ler a chegada do container.
+publica containers-exportacao imonitor-importador "I-monitor Importador" "Leitura da chegada do container pelo importador" 1.13.18-hml 119 hml imonitor-importacao-homolog.apk
+publica containers-exportacao imonitor-importador "I-monitor Importador" "Leitura da chegada do container pelo importador" 1.13.18-staging 119 staging imonitor-importacao-staging.apk
 
 # ---- DTA (ainda sem APK de produção no artefatos-mobile)
 publica dta imonitor-dta "I-monitor DTA" "Lacração e liberação de DTA" 1.13.27-hml 119 hml app-homologation-release.apk
@@ -51,7 +52,8 @@ ${CLI} set-access --system containers-exportacao --app-id imonitor --roles Opera
 ${CLI} set-access --system containers-exportacao --app-id carga-solta --roles Operator --operator-types redex,carrier,stuffer,security
 # Levantamento pede operator/costado, mas esse operator_type não existe nos backends: por ora só Master vê.
 ${CLI} set-access --system containers-exportacao --app-id imonitor-costado --roles Operator --operator-types costado
+${CLI} set-access --system containers-exportacao --app-id imonitor-importador --roles ExternalAgent
 ${CLI} set-access --system dta --app-id imonitor-dta --roles Operator --operator-types conferente,segurancaDestino
 
-for sistema in containers-exportacao containers-importacao dta; do ${CLI} show --system "${sistema}" >/dev/null; done
+for sistema in containers-exportacao dta; do ${CLI} show --system "${sistema}" >/dev/null; done
 echo "Catálogo inicial publicado em s3://${S3_BUCKET}"

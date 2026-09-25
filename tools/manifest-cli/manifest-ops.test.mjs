@@ -7,6 +7,7 @@ import addFormats from 'ajv-formats';
 
 import {
   ManifestError,
+  applyRemoveApp,
   apkKey,
   applyBlock,
   applyPromote,
@@ -125,6 +126,15 @@ test('set-access mantém critérios omitidos e limpa os vazios', () => {
   let m = applySetAccess(withVersions('1.0.0'), { appId: 'imonitor-costado', roles: ['Operator'], customers: ['c1'] });
   m = applySetAccess(m, { appId: 'imonitor-costado', customers: [] });
   assert.deepEqual(m.apps[0].access, { roles: ['Operator'], operatorTypes: [], customers: [] });
+});
+
+test('remove-app tira o app do manifesto e recusa app inexistente', () => {
+  const m = withVersions('1.0.0');
+  const semApp = applyRemoveApp(m, { appId: 'imonitor-costado' });
+  assert.deepEqual(semApp.apps, []);
+  assert.ok(validate(semApp), JSON.stringify(validate.errors));
+  assert.equal(m.apps.length, 1); // não altera o manifesto recebido
+  assert.throws(() => applyRemoveApp(m, { appId: 'outro' }), /App "outro" não existe/);
 });
 
 test('app ou versão inexistente gera erro claro', () => {

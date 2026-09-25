@@ -139,6 +139,14 @@ export function applyUnblock(manifest, { appId, version }) {
   return touch(next);
 }
 
+/** Remove um app inteiro do manifesto (ex.: publicado no sistema errado). Os APKs não são apagados. */
+export function applyRemoveApp(manifest, { appId }) {
+  const next = clone(manifest);
+  findApp(next, appId); // erro claro se não existir
+  next.apps = next.apps.filter((a) => a.id !== appId);
+  return touch(next);
+}
+
 /** Troca as regras de acesso. Critério omitido (undefined) é mantido; lista vazia remove a restrição. */
 export function applySetAccess(manifest, { appId, roles, operatorTypes, customers }) {
   const next = clone(manifest);

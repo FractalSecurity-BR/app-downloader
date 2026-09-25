@@ -11,6 +11,7 @@
 //   block       --system --app-id --version [--reason]
 //   unblock     --system --app-id --version
 //   set-access  --system --app-id [--roles a,b] [--operator-types a,b] [--customers id1,id2]   ("" limpa o critério)
+//   remove-app  --system --app-id
 //   show        --system
 import { createHash } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
@@ -28,6 +29,7 @@ import {
   applyBlock,
   applyPromote,
   applyPublish,
+  applyRemoveApp,
   applySetAccess,
   applyUnblock,
   emptyManifest,
@@ -210,6 +212,8 @@ const commands = {
         customers: list('customers'),
       }),
     ),
+  'remove-app': (storage) =>
+    updateManifest(storage, required('system'), (m) => applyRemoveApp(m, { appId: required('app-id') })),
   show: async (storage) => {
     const { data } = await storage.readJson(`${required('system')}/manifest.json`);
     if (!data) throw new ManifestError('Manifesto ainda não existe para esse sistema');
