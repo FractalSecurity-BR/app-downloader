@@ -3,7 +3,7 @@
 # raiz); este arquivo é a cópia de referência. VITE_API_URL vem das variáveis de ambiente da branch main.
 #
 # Os links da página antiga (/public/imonitor.apk e /public/carga_solta.apk) são redirecionados para o
-# APK direto no artefatos-mobile pelas regras de redirect do app; as imagens antigas de /public seguem
+# APK direto no artefatos-mobile pelas regras do app (cópia em amplify-custom-rules.json); as imagens antigas de /public seguem
 # sendo publicadas para não quebrar quem as referencia.
 #
 # Rollback para a página antiga: build spec anterior (sem build, baseDirectory "/") + revert da main
