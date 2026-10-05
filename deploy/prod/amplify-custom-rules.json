@@ -1,0 +1,17 @@
+[
+  {
+    "source": "/public/imonitor.apk",
+    "target": "https://artefatos-mobile.s3.sa-east-1.amazonaws.com/imonitor.apk",
+    "status": "302"
+  },
+  {
+    "source": "/public/carga_solta.apk",
+    "target": "https://artefatos-mobile.s3.sa-east-1.amazonaws.com/carga-solta.apk",
+    "status": "302"
+  },
+  {
+    "source": "</^[^.]+$|\\.(?!(css|gif|ico|jpg|jpeg|js|png|txt|svg|woff|woff2|ttf|map|json|webmanifest)$)([^.]+$)/>",
+    "target": "/index.html",
+    "status": "200"
+  }
+]
