@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
-# Build da imagem da API, push no ECR e atualização da Lambda portal-apps-api-hml.
+# Build da imagem da API, push no ECR e atualização da Lambda portal-apps-api-<ambiente> (padrão: hml).
 # Mesmo fluxo do deploy_hml.yml dos backends do i-monitor (e do .github/workflows/deploy_hml.yml deste repo).
 #
-# Uso: AWS_PROFILE=i-monitor ./deploy/hml/deploy-api.sh [--push-only]
+# Uso: AWS_PROFILE=i-monitor [ENV_NAME=prod] ./deploy/hml/deploy-api.sh [--push-only]
 set -euo pipefail
 
 export AWS_REGION="${AWS_REGION:-sa-east-1}"
 export AWS_PAGER=""
-NAME=portal-apps-api-hml
+ENV_NAME="${ENV_NAME:-hml}"
+case "${ENV_NAME}" in hml|prod) ;; *) echo "ENV_NAME inválido: ${ENV_NAME}" >&2; exit 1 ;; esac
+NAME="portal-apps-api-${ENV_NAME}"
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"

@@ -1,19 +1,27 @@
 #!/usr/bin/env bash
-# Cria (ou confere) a infraestrutura do ambiente HML do Portal de Aplicativos — IMONITOR-1619.
+# Cria (ou confere) a infraestrutura de um ambiente do Portal de Aplicativos — IMONITOR-1619.
+# Padrão: HML. Com ENV_NAME=prod cria os recursos portal-apps-*-prod e NÃO cria front: em
+# produção o front é o Amplify app-downloader (imonitor-download.fractal-security.com), já existente.
 #
 # Mesmo desenho dos backends do i-monitor (i-monitor-back / i-monitor-dta-back):
 #   ECR  →  Lambda em container (x86_64, 512 MB)  →  API Gateway HTTP, payload 1.0, stage "hml"
 # e o front num app Amplify próprio (deploy manual, link *.amplifyapp.com).
 #
 # Seguro para rodar de novo: só cria o que não existe e só atualiza recursos com o prefixo
-# portal-apps-*-hml. Não toca em nenhum recurso de outra aplicação.
+# portal-apps-*-<ambiente>. Não toca em nenhum recurso de outra aplicação.
 #
 # Uso: AWS_PROFILE=i-monitor ./deploy/hml/infra.sh
+#      AWS_PROFILE=i-monitor ENV_NAME=prod ./deploy/hml/infra.sh
 set -euo pipefail
 
 export AWS_REGION="${AWS_REGION:-sa-east-1}"
 export AWS_PAGER=""
-ENV_NAME=hml
+ENV_NAME="${ENV_NAME:-hml}"
+case "${ENV_NAME}" in
+  hml)  SYSTEMS_CONFIG_PATH=config/systems.hml.json ;;
+  prod) SYSTEMS_CONFIG_PATH=config/systems.json; PROD_WEB_URL=https://imonitor-download.fractal-security.com ;;
+  *) echo "ENV_NAME inválido: ${ENV_NAME} (use hml ou prod)" >&2; exit 1 ;;
+esac
 NAME="portal-apps-api-${ENV_NAME}"          # repositório ECR e função Lambda
 ROLE_NAME="${NAME}-role"
 API_NAME="${NAME}-api"
@@ -48,7 +56,7 @@ aws ecr put-lifecycle-policy --repository-name "${NAME}" --lifecycle-policy-text
 # ---------------------------------------------------------------- Imagem
 if ! aws ecr describe-images --repository-name "${NAME}" --image-ids imageTag=latest >/dev/null 2>&1; then
   log "Primeira imagem (a Lambda em container precisa de uma imagem para ser criada)"
-  "${HERE}/deploy-api.sh" --push-only
+  ENV_NAME="${ENV_NAME}" "${HERE}/deploy-api.sh" --push-only
 fi
 
 # ---------------------------------------------------------------- IAM role
@@ -112,6 +120,11 @@ for group in "/aws/lambda/${NAME}" "/aws/apigateway/${API_NAME}"; do
 done
 
 # ---------------------------------------------------------------- Amplify (front)
+if [ "${ENV_NAME}" = prod ]; then
+  log "Amplify: produção usa o app app-downloader existente (não é criado aqui)"
+  FRONT_APP_ID=d1o4nquc9ym1gk
+  WEB_URL="${PROD_WEB_URL}"
+else
 log "Amplify: ${FRONT_APP_NAME} (deploy manual, sem ligação com o GitHub)"
 FRONT_APP_ID=$(aws amplify list-apps --query "apps[?name=='${FRONT_APP_NAME}'].appId" --output text | awk 'NF && !f {print $1; f=1}')
 if [ -z "${FRONT_APP_ID}" ]; then
@@ -128,6 +141,7 @@ if ! aws amplify get-branch --app-id "${FRONT_APP_ID}" --branch-name "${FRONT_BR
   echo "branch ${FRONT_BRANCH} criada"
 fi
 WEB_URL="https://${FRONT_BRANCH}.${FRONT_APP_ID}.amplifyapp.com"
+fi
 
 # ---------------------------------------------------------------- API Gateway (id necessário para PUBLIC_URL)
 log "API Gateway HTTP: ${API_NAME}"
@@ -149,7 +163,7 @@ if ! aws lambda get-function --function-name "${NAME}" >/dev/null 2>&1; then
   JWT_SECRET=$(openssl rand -hex 32)
   aws lambda create-function --function-name "${NAME}" --package-type Image --code "ImageUri=${IMAGE_URI}" \
     --role "${ROLE_ARN}" --architectures x86_64 --memory-size 512 --timeout 30 \
-    --environment "Variables={NODE_ENV=production,PORTAL_JWT_SECRET=${JWT_SECRET},STORAGE_DRIVER=s3,S3_BUCKET=${BUCKET},SYSTEMS_CONFIG_PATH=config/systems.hml.json,PUBLIC_URL=${API_URL},WEB_URL=${WEB_URL},CORS_ORIGINS=${WEB_URL}}" \
+    --environment "Variables={NODE_ENV=production,PORTAL_JWT_SECRET=${JWT_SECRET},STORAGE_DRIVER=s3,S3_BUCKET=${BUCKET},SYSTEMS_CONFIG_PATH=${SYSTEMS_CONFIG_PATH},PUBLIC_URL=${API_URL},WEB_URL=${WEB_URL},CORS_ORIGINS=${WEB_URL}}" \
     --tags "${TAGS_KV}" >/dev/null
   aws lambda wait function-active-v2 --function-name "${NAME}"
   echo "criada"
@@ -195,6 +209,6 @@ cat <<EOF
   Front app id:  ${FRONT_APP_ID}
 
 Próximos passos:
-  ./deploy/hml/deploy-api.sh      # nova imagem da API
-  ./deploy/hml/deploy-front.sh    # build do front com VITE_API_URL=${API_URL}
+  ENV_NAME=${ENV_NAME} ./deploy/hml/deploy-api.sh   # nova imagem da API
+  # front: HML → ./deploy/hml/deploy-front.sh; prod → build do Amplify app-downloader com VITE_API_URL=${API_URL}
 EOF

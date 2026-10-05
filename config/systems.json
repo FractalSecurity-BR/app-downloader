@@ -24,7 +24,8 @@
       "id": "dta",
       "name": "DTA",
       "description": "I-monitor DTA",
-      "authBaseUrl": "https://mq52ew9le5.execute-api.sa-east-1.amazonaws.com/prod"
+      "authBaseUrl": "",
+      "enabled": false
     }
   ]
 }

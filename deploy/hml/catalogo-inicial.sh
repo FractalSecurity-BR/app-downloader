@@ -6,12 +6,12 @@
 # Regras de acesso conforme o levantamento "levantamento_login_portal_apks.docx".
 # Builds de homologação/staging só aparecem para Master (regra do portal).
 #
-# Uso: AWS_PROFILE=i-monitor ./deploy/hml/catalogo-inicial.sh
+# Uso: AWS_PROFILE=i-monitor [ENV_NAME=prod] ./deploy/hml/catalogo-inicial.sh
 set -euo pipefail
 
 export AWS_REGION="${AWS_REGION:-sa-east-1}"
 export STORAGE_DRIVER=s3
-export S3_BUCKET=fractal-portal-apps-hml
+export S3_BUCKET="fractal-portal-apps-${ENV_NAME:-hml}"
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 CLI="node ${ROOT}/tools/manifest-cli/index.mjs"
 ORIGEM="https://artefatos-mobile.s3.sa-east-1.amazonaws.com"

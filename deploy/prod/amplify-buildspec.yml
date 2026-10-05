@@ -1,0 +1,28 @@
+# Build spec do front de PRODUÇÃO no Amplify app-downloader (d1o4nquc9ym1gk, branch main,
+# imonitor-download.fractal-security.com). Fica gravado no próprio app Amplify (não em amplify.yml na
+# raiz); este arquivo é a cópia de referência. VITE_API_URL vem das variáveis de ambiente da branch main.
+#
+# Os links da página antiga (/public/imonitor.apk e /public/carga_solta.apk) são redirecionados para o
+# APK direto no artefatos-mobile pelas regras de redirect do app; as imagens antigas de /public seguem
+# sendo publicadas para não quebrar quem as referencia.
+#
+# Rollback para a página antiga: build spec anterior (sem build, baseDirectory "/") + revert da main
+# para a tag pagina-antiga-downloader (b029242).
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - nvm install 22 && nvm use 22
+        - npm --prefix web ci --no-audit --no-fund
+    build:
+      commands:
+        - npm --prefix web run build
+        - mkdir -p web/dist/public && cp public/*.png web/dist/public/
+  artifacts:
+    baseDirectory: web/dist
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - web/node_modules/**/*
