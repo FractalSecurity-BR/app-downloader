@@ -1,5 +1,8 @@
-# *.apk
+node_modules/
+dist/
+dev-storage/
+.env
 *.ipa
-
-# ./public/*.apk
-./public/*.ipa
+# APKs não ficam mais no repositório: vão para o bucket privado via GitHub Actions.
+*.apk
+*.tsbuildinfo

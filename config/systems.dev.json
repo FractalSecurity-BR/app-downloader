@@ -1,0 +1,13 @@
+{
+  "systems": [
+    { "id": "concursos", "name": "Concursos", "description": "Aplicativos do sistema Concursos", "authBaseUrl": "", "enabled": false },
+    {
+      "id": "containers-exportacao",
+      "name": "Containers Exportação",
+      "description": "I-monitor, Costado, Importador e Carga Solta",
+      "authBaseUrl": "http://localhost:3999/prod"
+    },
+    { "id": "containers-importacao", "name": "Containers Importação", "description": "Aplicativos do anel de Importação", "authBaseUrl": "", "enabled": false },
+    { "id": "dta", "name": "DTA", "description": "I-monitor DTA", "authBaseUrl": "http://localhost:3999/prod" }
+  ]
+}

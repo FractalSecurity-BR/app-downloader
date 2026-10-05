@@ -1,0 +1,94 @@
+name: Publicar app no Portal de Aplicativos
+description: >
+  Sobe o APK para o bucket privado do portal e registra a versão no manifesto do sistema.
+  O repositório que chama precisa ter credencial AWS com permissão de escrita no bucket
+  (informe aws-role-arn para OIDC ou configure as credenciais antes deste passo).
+
+inputs:
+  system:
+    description: "Sistema: concursos | containers-exportacao | containers-importacao | dta"
+    required: true
+  app-id:
+    description: "Id do app, minúsculo com hífens (ex.: imonitor-costado)"
+    required: true
+  app-name:
+    description: "Nome exibido no portal (ex.: I-monitor Costado)"
+    required: false
+  description:
+    description: "Descrição curta exibida no portal"
+    required: false
+  version:
+    description: "versionName do app (ex.: 2.9.0)"
+    required: true
+  build:
+    description: "versionCode do app (inteiro)"
+    required: false
+  environment:
+    description: "Ambiente em que a versão fica disponível: hml | staging | prod"
+    required: true
+  file:
+    description: "Caminho do APK gerado no build"
+    required: true
+  release-notes:
+    description: "Notas da versão"
+    required: false
+  bucket:
+    description: "Bucket privado do portal"
+    required: true
+  aws-region:
+    description: "Região do bucket"
+    required: false
+    default: sa-east-1
+  aws-role-arn:
+    description: "Role IAM assumida via OIDC. Deixe vazio se as credenciais já estiverem configuradas."
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 20
+
+    - if: inputs.aws-role-arn != ''
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ inputs.aws-role-arn }}
+        aws-region: ${{ inputs.aws-region }}
+
+    - name: Instalar manifest-cli
+      shell: bash
+      working-directory: ${{ github.action_path }}/../../../tools/manifest-cli
+      run: npm ci --omit=dev --no-audit --no-fund
+
+    - name: Publicar versão
+      shell: bash
+      env:
+        STORAGE_DRIVER: s3
+        S3_BUCKET: ${{ inputs.bucket }}
+        AWS_REGION: ${{ inputs.aws-region }}
+        CLI: ${{ github.action_path }}/../../../tools/manifest-cli/index.mjs
+        # Repassados por env para não interpolar texto livre dentro do script.
+        IN_SYSTEM: ${{ inputs.system }}
+        IN_APP_ID: ${{ inputs.app-id }}
+        IN_APP_NAME: ${{ inputs.app-name }}
+        IN_DESCRIPTION: ${{ inputs.description }}
+        IN_VERSION: ${{ inputs.version }}
+        IN_BUILD: ${{ inputs.build }}
+        IN_ENVIRONMENT: ${{ inputs.environment }}
+        IN_FILE: ${{ inputs.file }}
+        IN_NOTES: ${{ inputs.release-notes }}
+      run: |
+        args=(publish
+          --system "$IN_SYSTEM"
+          --app-id "$IN_APP_ID"
+          --version "$IN_VERSION"
+          --environment "$IN_ENVIRONMENT"
+          --file "$IN_FILE"
+          --commit "$GITHUB_SHA"
+          --created-by "github-actions:$GITHUB_REPOSITORY@$GITHUB_ACTOR")
+        [ -n "$IN_APP_NAME" ] && args+=(--app-name "$IN_APP_NAME")
+        [ -n "$IN_DESCRIPTION" ] && args+=(--description "$IN_DESCRIPTION")
+        [ -n "$IN_BUILD" ] && args+=(--build "$IN_BUILD")
+        [ -n "$IN_NOTES" ] && args+=(--release-notes "$IN_NOTES")
+        node "$CLI" "${args[@]}"

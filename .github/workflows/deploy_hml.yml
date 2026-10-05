@@ -1,0 +1,72 @@
+name: 🚀 Deploy Lambda Function to HML
+
+# Mesmo fluxo do deploy_hml.yml do i-monitor-back / i-monitor-dta-back:
+# push na develop → build da imagem → ECR → update da Lambda portal-apps-api-hml.
+# O front HML é publicado com deploy/hml/deploy-front.sh (app Amplify ainda sem ligação com o GitHub).
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - develop
+    paths-ignore:
+      - '**.md'
+      - 'doc/**'
+      - 'web/**'
+      - '.vscode/'
+      - '.idea/'
+
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🔎 Check AWS secrets
+        id: secrets
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        run: |
+          if [ -z "$AWS_ACCESS_KEY_ID" ]; then
+            echo "::warning::Secrets AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY/AWS_DEFAULT_REGION não configurados no repositório; deploy ignorado. Use deploy/hml/deploy-api.sh."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: ⬇️ Checkout code
+        if: steps.secrets.outputs.ok == 'true'
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Configure AWS Credentials
+        if: steps.secrets.outputs.ok == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+
+      - name: 🔐 Login to Amazon ECR
+        if: steps.secrets.outputs.ok == 'true'
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: 🔨 Build and Push Docker Image
+        if: steps.secrets.outputs.ok == 'true'
+        run: |
+          docker build \
+            --provenance=false \
+            -f Dockerfile.lambda \
+            -t ${{ steps.login-ecr.outputs.registry }}/portal-apps-api-hml:latest \
+            --push .
+
+      - name: 🚀 Deploy to Lambda
+        if: steps.secrets.outputs.ok == 'true'
+        run: |
+          aws lambda update-function-code \
+            --function-name portal-apps-api-hml \
+            --image-uri ${{ steps.login-ecr.outputs.registry }}/portal-apps-api-hml:latest

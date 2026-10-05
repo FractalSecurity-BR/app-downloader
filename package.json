@@ -1,0 +1,14 @@
+{
+  "name": "portal-apps",
+  "private": true,
+  "scripts": {
+    "install:all": "npm --prefix api ci && npm --prefix web ci && npm --prefix tools/manifest-cli ci",
+    "dev:seed": "./dev/seed.sh",
+    "dev:auth": "node dev/fake-auth.mjs",
+    "dev:api": "cd api && PORTAL_JWT_SECRET=dev-secret-dev-secret-dev-secret-123 STORAGE_DRIVER=local SYSTEMS_CONFIG_PATH=config/systems.dev.json PUBLIC_URL=http://localhost:5173 npm run dev",
+    "dev:api:hml": "cd api && PORTAL_JWT_SECRET=dev-secret-dev-secret-dev-secret-123 STORAGE_DRIVER=local SYSTEMS_CONFIG_PATH=config/systems.hml.json PUBLIC_URL=http://localhost:5173 npm run dev",
+    "dev:web": "npm --prefix web run dev",
+    "build": "npm --prefix web run build && npm --prefix api run build",
+    "test": "npm --prefix api test && npm --prefix tools/manifest-cli test"
+  }
+}
