@@ -46,6 +46,11 @@ publica containers-exportacao imonitor-importador "I-monitor Importador" "Leitur
 publica dta imonitor-dta "I-monitor DTA" "Lacração e liberação de DTA" 1.13.27-hml 119 hml app-homologation-release.apk
 publica dta imonitor-dta "I-monitor DTA" "Lacração e liberação de DTA" 1.13.27-stg 119 staging app-staging-release.apk
 
+# ---- Concursos (malote). Sem regra de acesso: todo usuário do malote vê; o malote não tem Master,
+# então o build de homologação fica visível só para quem tiver alias_level Master (ninguém, por ora).
+publica concursos malote "Malote" "Aplicativo do Concursos (malote)" 1.5.12 40 prod imonitor-concursos.apk
+publica concursos malote "Malote" "Aplicativo do Concursos (malote)" 1.5.13-homolog 40 hml malote-hml.apk
+
 # ---- Regras de acesso (Master sempre vê tudo)
 ${CLI} set-access --system containers-exportacao --app-id imonitor --roles Operator --operator-types redex,carrier,stuffer
 ${CLI} set-access --system containers-exportacao --app-id carga-solta --roles Operator --operator-types redex,carrier,stuffer,security
@@ -54,5 +59,5 @@ ${CLI} set-access --system containers-exportacao --app-id imonitor-costado --rol
 ${CLI} set-access --system containers-exportacao --app-id imonitor-importador --roles ExternalAgent
 ${CLI} set-access --system dta --app-id imonitor-dta --roles Operator --operator-types conferente,segurancaDestino
 
-for sistema in containers-exportacao dta; do ${CLI} show --system "${sistema}" >/dev/null; done
+for sistema in concursos containers-exportacao dta; do ${CLI} show --system "${sistema}" >/dev/null; done
 echo "Catálogo inicial publicado em s3://${S3_BUCKET}"

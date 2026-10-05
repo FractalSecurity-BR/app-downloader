@@ -3,9 +3,9 @@
     {
       "id": "concursos",
       "name": "Concursos",
-      "description": "Aplicativos do sistema Concursos",
-      "authBaseUrl": "",
-      "enabled": false
+      "description": "Malote",
+      "authBaseUrl": "https://zavzfjewo4.execute-api.sa-east-1.amazonaws.com/prod",
+      "loginPath": "/api/auth/login"
     },
     {
       "id": "containers-exportacao",

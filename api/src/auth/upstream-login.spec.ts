@@ -40,6 +40,17 @@ describe('upstreamLogin', () => {
     expect(user).toEqual({ username: 'joao', aliasLevel: 'Operator', customerId: 'c1', operatorType: 'inspector', role: 'x' });
   });
 
+  it('lê o token do malote (Concursos): roles e customerId', async () => {
+    const fetch = fakeFetch(200, {
+      access_token: jwtWith({ id: 'u1', username: 'maria', roles: ['Manager', 'LocalCoordinator'], customerId: 'c9' }),
+      refresh_token: 'r',
+    });
+    const user = await upstreamLogin({ authBaseUrl: 'https://malote.test/hml', loginPath: '/api/auth/login' }, 'maria', 's', 1000, fetch as any);
+
+    expect(fetch).toHaveBeenCalledWith('https://malote.test/hml/api/auth/login', expect.anything());
+    expect(user).toEqual({ username: 'maria', aliasLevel: 'Manager, LocalCoordinator', customerId: 'c9', operatorType: '', role: '' });
+  });
+
   it('401 vira INVALID_CREDENTIALS', async () => {
     const fetch = fakeFetch(401, { code: 'INVALID_CREDENTIALS' });
     expect(await errorOf(upstreamLogin(env, 'a', 'b', 1000, fetch as any))).toEqual({ status: 401, code: 'INVALID_CREDENTIALS' });

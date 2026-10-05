@@ -99,10 +99,14 @@ export async function upstreamLogin(
     throw new BadGatewayException({ code: 'SYSTEM_UNAVAILABLE', message: 'Token do sistema em formato inesperado' });
   }
 
+  // O malote (Concursos) não segue o contrato do i-monitor no token: manda `roles` (lista) no
+  // lugar de `alias_level` e `customerId` no lugar de `customer_id`.
+  const roles = Array.isArray(claims.roles) ? claims.roles.map(text).filter(Boolean) : [];
+
   return {
     username: text(claims.username) || username,
-    aliasLevel: text(claims.alias_level),
-    customerId: text(claims.customer_id),
+    aliasLevel: text(claims.alias_level) || roles.join(', '),
+    customerId: text(claims.customer_id ?? claims.customerId),
     operatorType: text(claims.operator_type),
     role: text(claims.role ?? body.role),
   };
