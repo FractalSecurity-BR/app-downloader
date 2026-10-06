@@ -30,7 +30,7 @@ Navegador ──► Portal (api/ + web/) ── lê manifesto e gera link ──
 - **Produção x builds de teste:** todo usuário vê só as versões de produção. Os **Master do i-monitor**
   (`alias_level = Master`) veem também os builds de homologação/staging, num bloco separado marcado como
   "build de teste · uso interno". Uma versão que já está em produção não se repete no bloco de teste.
-- **Download:** o APK nunca é público. O portal gera um link `/d/<token>` válido por 10 min (usado pelo botão e
+- **Download:** o APK nunca é público. O portal gera um link `/d/<token>` válido por 24 h (`DOWNLOAD_LINK_TTL_SECONDS`; usado pelo botão e
   pelo QR Code) que, ao ser aberto, redireciona para uma URL assinada do S3 válida por 5 min. Se a versão for
   bloqueada nesse meio-tempo, o link para de funcionar.
 - **Automação:** ninguém edita o manifesto à mão. A action `publish-app` sobe o APK e registra a versão; o

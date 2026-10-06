@@ -166,8 +166,8 @@ if ! aws lambda get-function --function-name "${NAME}" >/dev/null 2>&1; then
   # Segredo gerado aqui e guardado só na configuração da Lambda (nunca no repositório).
   JWT_SECRET=$(openssl rand -hex 32)
   # JSON (e não a sintaxe curta Variables={...}): CORS_ORIGINS tem vírgula.
-  LAMBDA_ENV=$(python3 -c 'import json,sys; k=["NODE_ENV","PORTAL_JWT_SECRET","STORAGE_DRIVER","S3_BUCKET","SYSTEMS_CONFIG_PATH","PUBLIC_URL","WEB_URL","CORS_ORIGINS"]; print(json.dumps({"Variables": dict(zip(k, sys.argv[1:]))}))' \
-    production "${JWT_SECRET}" s3 "${BUCKET}" "${SYSTEMS_CONFIG_PATH}" "${API_URL}" "${WEB_URL}" "${CORS_ORIGINS}")
+  LAMBDA_ENV=$(python3 -c 'import json,sys; k=["NODE_ENV","PORTAL_JWT_SECRET","STORAGE_DRIVER","S3_BUCKET","SYSTEMS_CONFIG_PATH","PUBLIC_URL","WEB_URL","CORS_ORIGINS","DOWNLOAD_LINK_TTL_SECONDS"]; print(json.dumps({"Variables": dict(zip(k, sys.argv[1:]))}))' \
+    production "${JWT_SECRET}" s3 "${BUCKET}" "${SYSTEMS_CONFIG_PATH}" "${API_URL}" "${WEB_URL}" "${CORS_ORIGINS}" 86400)
   aws lambda create-function --function-name "${NAME}" --package-type Image --code "ImageUri=${IMAGE_URI}" \
     --role "${ROLE_ARN}" --architectures x86_64 --memory-size 512 --timeout 30 \
     --environment "${LAMBDA_ENV}" \
