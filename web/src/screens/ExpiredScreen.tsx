@@ -13,7 +13,7 @@ export function ExpiredScreen({ reason }: { reason: string | null }) {
           <p className="lead">
             {unavailable
               ? 'A versão foi retirada do portal. Entre novamente para baixar a versão atual.'
-              : 'Por segurança, os links valem só alguns minutos. Entre no portal e gere um novo.'}
+              : 'Por segurança, os links têm prazo de validade. Entre no portal e gere um novo.'}
           </p>
           <button type="button" className="btn btn--primary" onClick={() => navigate('/')}>
             Ir para o portal

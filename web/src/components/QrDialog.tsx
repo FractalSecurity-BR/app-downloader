@@ -51,8 +51,10 @@ export function QrDialog({ title, version, environmentName, requestLink, onClose
   }, [state]);
 
   const expired = state.status === 'ready' && seconds === 0;
-  const mm = String(Math.floor(seconds / 60)).padStart(2, '0');
+  const hh = Math.floor(seconds / 3600);
+  const mm = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
   const ss = String(seconds % 60).padStart(2, '0');
+  const timer = hh > 0 ? `${String(hh).padStart(2, '0')}:${mm}:${ss}` : `${mm}:${ss}`;
 
   return (
     <dialog ref={dialog} className="qr" onClose={onClose} onClick={(e) => e.target === dialog.current && dialog.current.close()}>
@@ -90,7 +92,7 @@ export function QrDialog({ title, version, environmentName, requestLink, onClose
         <div className="qr__foot">
           {state.status === 'ready' && !expired && (
             <span className="qr__timer">
-              expira em <strong>{mm}:{ss}</strong>
+              expira em <strong>{timer}</strong>
             </span>
           )}
           {state.status === 'error' && (
